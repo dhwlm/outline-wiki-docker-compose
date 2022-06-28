@@ -126,35 +126,35 @@ function create_env_files {
 }
 
 function generate_starter_https_conf {
-    echo "Generating HTTPS configuration"
-    # https://letsencrypt.org/docs/certificates-for-localhost/
-    openssl req -x509 -out data/certs/public.crt -keyout data/certs/private.key \
-        -newkey rsa:2048 -nodes -sha256 \
-        -subj '/CN=localhost' -extensions EXT -config <( \
-        printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
+  echo "Generating HTTPS configuration"
+  # https://letsencrypt.org/docs/certificates-for-localhost/
+  openssl req -x509 -out data/certs/public.crt -keyout data/certs/private.key \
+      -newkey rsa:2048 -nodes -sha256 \
+      -subj '/CN=localhost' -extensions EXT -config <( \
+      printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
 
-    pushd data/nginx
-    rm -f default.conf
-    ln -s https.conf.disabled default.conf
-    popd
+  pushd data/nginx
+  rm -f default.conf
+  ln -s https.conf.disabled default.conf
+  popd
 
-    set -o allexport; source env.outline; set +o allexport
-    read -p "Enter https port number [443]: " HTTPS_PORT
-    HTTPS_PORT=${HTTPS_PORT:-443}
+  set -o allexport; source env.outline; set +o allexport
+  read -p "Enter https port number [443]: " HTTPS_PORT
+  HTTPS_PORT=${HTTPS_PORT:-443}
 
-    if [ $HTTPS_PORT == 443 ]
-    then
-        URL="https://${HOST}"
-    else
-        URL="https://${HOST}:${HTTPS_PORT}"
-    fi
+  if [ $HTTPS_PORT == 443 ]
+  then
+      URL="https://${HOST}"
+  else
+      URL="https://${HOST}:${HTTPS_PORT}"
+  fi
 
-    sed "s|4443:443|${HTTPS_PORT}:443|" -i docker-compose.yml
+  sed "s|4443:443|${HTTPS_PORT}:443|" -i docker-compose.yml
 
-    env_replace FORCE_HTTPS 'true' env.outline
-    env_add HTTPS_PORT $HTTPS_PORT env.outline
-    env_replace URL $URL env.outline
-    env_replace AWS_S3_UPLOAD_BUCKET_URL $URL env.outline
+  env_replace FORCE_HTTPS 'true' env.outline
+  env_add HTTPS_PORT $HTTPS_PORT env.outline
+  env_replace URL $URL env.outline
+  env_replace AWS_S3_UPLOAD_BUCKET_URL $URL env.outline
 }
 
 function delete_data {
@@ -162,15 +162,29 @@ function delete_data {
 	DELETE_DB=${DELETE_DB:-no};
 	if [ $DELETE_DB == "yes" ]
 	then
-        echo "deleting database and images"
+    echo "deleting database and images"
 		rm -rfv data/pgdata data/minio_root
 	fi
 }
 
 function init_data_dirs {
-    # get url from outline env
-    set -o allexport; source env.outline; set +o allexport
-    mkdir -p data/minio_root/${AWS_S3_UPLOAD_BUCKET_NAME} data/pgdata
+  # get url from outline env
+  set -o allexport; source env.outline; set +o allexport
+  mkdir -p data/minio_root/${AWS_S3_UPLOAD_BUCKET_NAME} data/pgdata
+}
+
+function gen_https_cert {
+  # get url from outline env
+  set -o allexport; source env.outline; set +o allexport
+  docker-compose run --rm --entrypoint "certbot certonly --webroot -w /var/www/certbot --agree-tos --force-renewal --cert-name main_cert -d ${HOST}" certbot
+  pushd data/nginx
+  rm -f default.conf
+  ln -s https_certbot.conf.disabled default.conf
+  popd
+  #rm data/certs/public.crt
+  #rm data/certs/private.key
+  #ln -s data/certbot/conf/live/main_cert/fullchain.pem data/certs/public.crt
+  #ln -s data/certbot/conf/live/main_cert/privkey.pem data/certs/private.key
 }
 
 $*
