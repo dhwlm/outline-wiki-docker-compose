@@ -57,8 +57,8 @@ function create_slack_env {
 
     touch env.slack
     env_add SLACK_APP_ID ${SLACK_APP_ID_INP:-SLACK_APP_ID} env.slack
-    env_add SLACK_KEY ${SLACK_KEY_INP:-SLACK_KEY} env.slack
-    env_add SLACK_SECRET ${SLACK_SECRET_INP:-SLACK_SECRET} env.slack
+    env_add SLACK_CLIENT_ID ${SLACK_KEY_INP:-SLACK_KEY} env.slack
+    env_add SLACK_CLIENT_SECRET ${SLACK_SECRET_INP:-SLACK_SECRET} env.slack
     env_add SLACK_VERIFICATION_TOKEN ${SLACK_VERIFICATION_TOKEN_INP:-SLACK_VERIFICATION_TOKEN} env.slack
 }
 
@@ -111,16 +111,16 @@ function create_env_files {
     # Setup datastore
     sed "s|outline-bucket|${BUCKET_NAME}|" -i data/nginx/http.conf.disabled
     sed "s|outline-bucket|${BUCKET_NAME}|" -i data/nginx/https.conf.disabled
-    MINIO_ACCESS_KEY=`openssl rand -hex 8`
-    MINIO_SECRET_KEY=`openssl rand -hex 32`
+    MINIO_ROOT_USER=`openssl rand -hex 8`
+    MINIO_ROOT_PASSWORD=`openssl rand -hex 32`
 
     rm -f env.minio
-    env_add MINIO_ACCESS_KEY $MINIO_ACCESS_KEY env.minio
-    env_add MINIO_SECRET_KEY $MINIO_SECRET_KEY env.minio
+    env_add MINIO_ROOT_USER $MINIO_ROOT_USER env.minio
+    env_add MINIO_ROOT_PASSWORD $MINIO_ROOT_PASSWORD env.minio
     env_add MINIO_BROWSER off env.minio
 
-    env_replace AWS_ACCESS_KEY_ID $MINIO_ACCESS_KEY env.outline
-    env_replace AWS_SECRET_ACCESS_KEY $MINIO_SECRET_KEY env.outline
+    env_replace AWS_ACCESS_KEY_ID $MINIO_ROOT_USER env.outline
+    env_replace AWS_SECRET_ACCESS_KEY $MINIO_ROOT_PASSWORD env.outline
     env_replace AWS_S3_UPLOAD_BUCKET_NAME $BUCKET_NAME env.outline
     env_replace AWS_S3_UPLOAD_BUCKET_URL $URL env.outline
 }
