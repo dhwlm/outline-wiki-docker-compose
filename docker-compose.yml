@@ -1,5 +1,14 @@
 version: "3"
 services:
+  startup:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: /bin/sh -c "
+      /usr/bin/mc config host add minio http://minio:9000 26ff79382dd42778 7d1876868c1cc516bbb95988b4f06f52bf9a9f9caf6592b3c79c03c2153ba108;
+      /usr/bin/mc mb minio/outline-bucket;
+      /usr/bin/mc policy set download minio/outline-bucket;
+      exit 0;"
   redis:
     image: redis
     restart: always
@@ -17,6 +26,8 @@ services:
     volumes:
       - ./data/minio_root:/minio_root:z
       - ./data/certs:/root/.minio/certs:z
+      - ./data/certbot/conf:/etc/letsencrypt:z
+      - ./data/certbot/www:/var/www/certbot:z
     command: "minio server /minio_root"
     env_file: ./env.minio
     restart: always
@@ -43,6 +54,16 @@ services:
     volumes:
       - ./data/nginx/:/etc/nginx/conf.d/:z
       - ./data/certs/:/etc/ssl/certs/:z
+      - ./data/certbot/conf:/etc/letsencrypt:z
+      - ./data/certbot/www:/var/www/certbot:z
     restart: always
     depends_on:
       - outline
+      - certbot
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt:z
+      - ./data/certbot/www:/var/www/certbot:z
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
