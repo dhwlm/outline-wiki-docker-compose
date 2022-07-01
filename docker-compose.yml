@@ -4,8 +4,9 @@ services:
     image: minio/mc
     depends_on:
       - minio
+    env_file: ./env.minio
     entrypoint: /bin/sh -c "
-      /usr/bin/mc config host add minio http://minio:9000 26ff79382dd42778 7d1876868c1cc516bbb95988b4f06f52bf9a9f9caf6592b3c79c03c2153ba108;
+      /usr/bin/mc config host add minio http://minio:9000 MINIO_ROOT_USER MINIO_ROOT_PASSWORD;
       /usr/bin/mc mb minio/outline-bucket;
       /usr/bin/mc policy set download minio/outline-bucket;
       exit 0;"
@@ -32,7 +33,7 @@ services:
     env_file: ./env.minio
     restart: always
   outline:
-    image: outlinewiki/outline:latest
+    image: outlinewiki/outline:0.64.3
     command: sh -c "yarn sequelize:migrate --env production-ssl-disabled && yarn start"
     environment:
       - DATABASE_URL=postgres://user:pass@postgres:5432/outline

@@ -43,13 +43,21 @@ server {
     location /outline-bucket {
         include /etc/nginx/conf.d/include/proxy.conf;
         # minio has its own tls implementation
-        proxy_pass https://minio:9000;
+        proxy_pass http://minio:9000;
     }
 
     # Proxy any other request to the application server running on port 9001
     location / {
         include /etc/nginx/conf.d/include/proxy.conf;
         proxy_pass http://outline:3000;
+    }
+
+    location /realtime/ {
+        proxy_pass http://outline:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
     }
 }
 
